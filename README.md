@@ -30,7 +30,7 @@ VOC拓展数据集的百度网盘如下：
 链接: https://pan.baidu.com/s/1BrR7AUM1XJvPWjKMIy2uEw 提取码: vszf    
 ### 预测步骤
 #### 1、使用预训练权重
-a、下载完库后解压，如果想用backbone为mobilenet的进行预测，直接运行predict.py就可以了；如果想要利用backbone为resnet50的进行预测，在百度网盘下载pspnet_resnet50.h5，放入model_data，修改pspnet.py的backbone和model_path之后再运行predict.py，输入。  
+a、下载完库后解压，如果想用backbone为mobilenet的进行预测，直接运行predict.py就可以了；如果想要利用backbone为resnet50的进行预测，在百度网盘下载pspnet_resnet50.pth，放入model_data，修改pspnet.py的backbone和model_path之后再运行predict.py，输入。  
 ```python
 img/street.jpg
 ```
@@ -68,7 +68,7 @@ d、利用video.py可进行摄像头检测。
 2、训练前将标签文件放在VOCdevkit文件夹下的VOC2007文件夹下的SegmentationClass中。    
 3、训练前将图片文件放在VOCdevkit文件夹下的VOC2007文件夹下的JPEGImages中。    
 4、在训练前利用voc2pspnet.py文件生成对应的txt。    
-5、在train.py文件夹下面，选择自己要使用的主干模型和下采样因子。本文提供的主干模型有mobilenet和resnet50。下采样因子可以在8和16中选择。需要注意的是，预训练模型需要和主干模型相对应。  
+5、在train.py文件夹下面，选择自己要使用的主干模型和下采样因子。本文提供的主干模型有mobilenet和resnet50。下采样因子可以在8和16中选择。需要注意的是，预训练模型需要和主干模型相对应。 
 6、注意修改train.py的num_classes为分类个数+1。  
 7、运行train.py即可开始训练。  
 
