@@ -25,7 +25,7 @@ torch==1.2.0
 
 ### 文件下载
 训练所需的pspnet_mobilenetv2.pth和pspnet_resnet50.pth可在百度网盘中下载。    
-链接: https://pan.baidu.com/s/1_nEtsjUOeJYHFyVec77l4Q 提取码: fikr     
+链接: https://pan.baidu.com/s/1JX0BoAroPChBQrXYnybqzg 提取码: papc    
 VOC拓展数据集的百度网盘如下：  
 链接: https://pan.baidu.com/s/1BrR7AUM1XJvPWjKMIy2uEw 提取码: vszf    
 ### 预测步骤
