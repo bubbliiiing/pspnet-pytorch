@@ -180,7 +180,10 @@ if __name__ == "__main__":
 
     model = PSPNet(num_classes=NUM_CLASSES, backbone=backbone, downsample_factor=downsample_factor, pretrained=pretrained, aux_branch=aux_branch).train()
     
-    # voc数据集下进行训练的
+    #-------------------------------------------#
+    #   权值文件的下载请看README
+    #   权值和主干特征提取网络一定要对应
+    #-------------------------------------------#
     model_path = r"model_data/pspnet_mobilenetv2.pth"
     # 加快模型训练的效率
     print('Loading weights into state dict...')
