@@ -26,7 +26,7 @@ class PSPNet(object):
     }
 
     #---------------------------------------------------#
-    #   初始化UNET
+    #   初始化PSPNET
     #---------------------------------------------------#
     def __init__(self, **kwargs):
         self.__dict__.update(self._defaults)
