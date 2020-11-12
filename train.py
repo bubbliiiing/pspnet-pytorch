@@ -225,9 +225,9 @@ if __name__ == "__main__":
 
         train_dataset = PSPnetDataset(train_lines, inputs_size, NUM_CLASSES, True)
         val_dataset = PSPnetDataset(val_lines, inputs_size, NUM_CLASSES, False)
-        gen = DataLoader(train_dataset, batch_size=Batch_size, num_workers=1, pin_memory=True,
+        gen = DataLoader(train_dataset, shuffle=True, batch_size=Batch_size, num_workers=1, pin_memory=True,
                                 drop_last=True, collate_fn=pspnet_dataset_collate)
-        gen_val = DataLoader(val_dataset, batch_size=Batch_size, num_workers=4,pin_memory=True, 
+        gen_val = DataLoader(val_dataset, shuffle=True, batch_size=Batch_size, num_workers=4,pin_memory=True, 
                                 drop_last=True, collate_fn=pspnet_dataset_collate)
 
         epoch_size      = max(1, len(train_lines)//Batch_size)
@@ -250,9 +250,9 @@ if __name__ == "__main__":
 
         train_dataset = PSPnetDataset(train_lines, inputs_size, NUM_CLASSES, True)
         val_dataset = PSPnetDataset(val_lines, inputs_size, NUM_CLASSES, False)
-        gen = DataLoader(train_dataset, batch_size=Batch_size, num_workers=4, pin_memory=True,
+        gen = DataLoader(train_dataset, shuffle=True, batch_size=Batch_size, num_workers=4, pin_memory=True,
                                 drop_last=True, collate_fn=pspnet_dataset_collate)
-        gen_val = DataLoader(val_dataset, batch_size=Batch_size, num_workers=4,pin_memory=True, 
+        gen_val = DataLoader(val_dataset, shuffle=True, batch_size=Batch_size, num_workers=4,pin_memory=True, 
                                 drop_last=True, collate_fn=pspnet_dataset_collate)
 
         epoch_size      = max(1, len(train_lines)//Batch_size)
