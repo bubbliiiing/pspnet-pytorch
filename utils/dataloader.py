@@ -103,9 +103,6 @@ class PSPnetDataset(Dataset):
 
 
     def __getitem__(self, index):
-        if index == 0:
-            shuffle(self.train_lines)
-            
         annotation_line = self.train_lines[index]
         name = annotation_line.split()[0]
         # 从文件中读取图像
