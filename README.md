@@ -62,7 +62,7 @@ img/street.jpg
 2. 在train.py中设置对应参数，默认参数已经对应voc数据集所需要的参数了，所以只要修改backbone和model_path即可。  
 3. 运行train.py进行训练。  
 
-#### b、训练自己的数据集
+### b、训练自己的数据集
 1. 本文使用VOC格式进行训练。  
 2. 训练前将标签文件放在VOCdevkit文件夹下的VOC2007文件夹下的SegmentationClass中。    
 3. 训练前将图片文件放在VOCdevkit文件夹下的VOC2007文件夹下的JPEGImages中。    
