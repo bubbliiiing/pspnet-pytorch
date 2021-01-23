@@ -1,20 +1,25 @@
-from nets.pspnet import PSPNet as pspnet
-from torch import nn
-from PIL import Image
-from torch.autograd import Variable
-import torch.nn.functional as F  
-import numpy as np
 import colorsys
-import torch
 import copy
 import os
 
+import numpy as np
+import torch
+import torch.nn.functional as F
+from PIL import Image
+from torch import nn
+from torch.autograd import Variable
+
+from nets.pspnet import PSPNet as pspnet
+
+
+#--------------------------------------------#
+#   使用自己训练好的模型预测需要修改3个参数
+#   model_path、backbone和num_classes都需要修改！
+#   如果出现shape不匹配
+#   一定要注意训练时的model_path、
+#   backbone和num_classes数的修改
+#--------------------------------------------#
 class PSPNet(object):
-    #-----------------------------------------#
-    #   注意修改model_path、num_classes
-    #   和backbone
-    #   使其符合自己的模型
-    #-----------------------------------------#
     _defaults = {
         "model_path"        :   'model_data/pspnet_mobilenetv2.pth',
         "model_image_size"  :   (473, 473, 3),
@@ -22,6 +27,10 @@ class PSPNet(object):
         "downsample_factor" :   16,
         "num_classes"       :   21,
         "cuda"              :   True,
+        #--------------------------------#
+        #   blend参数用于控制是否
+        #   让识别结果和原图混合
+        #--------------------------------#
         "blend"             :   True,
     }
 
@@ -33,21 +42,22 @@ class PSPNet(object):
         self.generate()
 
     #---------------------------------------------------#
-    #   获得所有的分类
+    #   载入模型
     #---------------------------------------------------#
     def generate(self):
-        os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+        #-------------------------------#
+        #   载入模型与权值
+        #-------------------------------#
         self.net = pspnet(num_classes=self.num_classes, downsample_factor=self.downsample_factor, pretrained=False, backbone=self.backbone, aux_branch=False)
         self.net = self.net.eval()
-
         state_dict = torch.load(self.model_path)
         self.net.load_state_dict(state_dict, strict=False)
         if self.cuda:
+            os.environ["CUDA_VISIBLE_DEVICES"] = '0'
             self.net = nn.DataParallel(self.net)
             self.net = self.net.cuda()
-
         print('{} model, anchors, and classes loaded.'.format(self.model_path))
-        # 画框设置不同的颜色
+
         if self.num_classes <= 21:
             self.colors = [(0, 0, 0), (128, 0, 0), (0, 128, 0), (128, 128, 0), (0, 0, 128), (128, 0, 128), (0, 128, 128), 
                     (128, 128, 128), (64, 0, 0), (192, 0, 0), (64, 128, 0), (192, 128, 0), (64, 0, 128), (192, 0, 128), 
@@ -73,34 +83,60 @@ class PSPNet(object):
         new_image = Image.new('RGB', size, (128,128,128))
         new_image.paste(image, ((w-nw)//2, (h-nh)//2))
         return new_image,nw,nh
+
     #---------------------------------------------------#
     #   检测图片
     #---------------------------------------------------#
     def detect_image(self, image):
+        #---------------------------------------------------#
+        #   对输入图像进行一个备份，后面用于绘图
+        #---------------------------------------------------#
         old_img = copy.deepcopy(image)
         orininal_h = np.array(image).shape[0]
         orininal_w = np.array(image).shape[1]
 
-        image, nw, nh = self.letterbox_image(image,(self.model_image_size[1],self.model_image_size[0]))
+        #---------------------------------------------------#
+        #   进行不失真的resize，添加灰条，进行图像归一化
+        #---------------------------------------------------#
+        image, nw, nh = self.letterbox_image(image, (self.model_image_size[1],self.model_image_size[0]))
         images = [np.array(image)/255]
         images = np.transpose(images,(0,3,1,2))
 
         with torch.no_grad():
             images = Variable(torch.from_numpy(images).type(torch.FloatTensor))
             if self.cuda:
-                images =images.cuda()
+                images = images.cuda()
 
+            #---------------------------------------------------#
+            #   图片传入网络进行预测
+            #---------------------------------------------------#
             pr = self.net(images)[0]
-            pr = F.softmax(pr.permute(1,2,0),dim = -1).cpu().numpy().argmax(axis=-1)
+            #---------------------------------------------------#
+            #   取出每一个像素点的种类
+            #---------------------------------------------------#
+            pr = F.softmax(pr.permute(1,2,0), dim = -1).cpu().numpy().argmax(axis=-1)
+            #--------------------------------------#
+            #   将灰条部分截取掉
+            #--------------------------------------#
             pr = pr[int((self.model_image_size[0]-nh)//2):int((self.model_image_size[0]-nh)//2+nh), int((self.model_image_size[1]-nw)//2):int((self.model_image_size[1]-nw)//2+nw)]
 
+        #------------------------------------------------#
+        #   创建一副新图，并根据每个像素点的种类赋予颜色
+        #------------------------------------------------#
         seg_img = np.zeros((np.shape(pr)[0],np.shape(pr)[1],3))
         for c in range(self.num_classes):
             seg_img[:,:,0] += ((pr[:,: ] == c )*( self.colors[c][0] )).astype('uint8')
             seg_img[:,:,1] += ((pr[:,: ] == c )*( self.colors[c][1] )).astype('uint8')
             seg_img[:,:,2] += ((pr[:,: ] == c )*( self.colors[c][2] )).astype('uint8')
 
-        image = Image.fromarray(np.uint8(seg_img)).resize((orininal_w,orininal_h))
+        #------------------------------------------------#
+        #   将新图片转换成Image的形式
+        #------------------------------------------------#
+        image = Image.fromarray(np.uint8(seg_img)).resize((orininal_w, orininal_h), Image.NEAREST)
+
+        #------------------------------------------------#
+        #   将新图片和原图片混合
+        #------------------------------------------------#
         if self.blend:
             image = Image.blend(old_img,image,0.7)
         

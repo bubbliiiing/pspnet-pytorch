@@ -27,7 +27,6 @@ def letterbox_image(image, label , size):
     label = label.resize((nw,nh), Image.NEAREST)
     new_label = Image.new('L', size, (0))
     new_label.paste(label, ((w-nw)//2, (h-nh)//2))
-
     return new_image, new_label
 
 def rand(a=0, b=1):
@@ -58,13 +57,14 @@ class PSPnetDataset(Dataset):
         rand_jit2 = rand(1-jitter,1+jitter)
         new_ar = w/h * rand_jit1/rand_jit2
 
-        scale = rand(0.5,1.5)
+        scale = rand(0.25, 2)
         if new_ar < 1:
             nh = int(scale*h)
             nw = int(nh*new_ar)
         else:
             nw = int(scale*w)
             nh = int(nw/new_ar)
+            
         image = image.resize((nw,nh), Image.BICUBIC)
         label = label.resize((nw,nh), Image.NEAREST)
         label = label.convert("L")
@@ -105,12 +105,13 @@ class PSPnetDataset(Dataset):
     def __getitem__(self, index):
         annotation_line = self.train_lines[index]
         name = annotation_line.split()[0]
+        
         # 从文件中读取图像
         jpg = Image.open(r"./VOCdevkit/VOC2007/JPEGImages" + '/' + name + ".jpg")
         png = Image.open(r"./VOCdevkit/VOC2007/SegmentationClass" + '/' + name + ".png")
 
         if self.random_data:
-            jpg, png = self.get_random_data(jpg,png,(int(self.image_size[1]),int(self.image_size[0])))
+            jpg, png = self.get_random_data(jpg,png,(int(self.image_size[0]),int(self.image_size[1])))
         else:
             jpg, png = letterbox_image(jpg, png, (int(self.image_size[1]),int(self.image_size[0])))
 
@@ -120,8 +121,9 @@ class PSPnetDataset(Dataset):
         
         # 转化成one_hot的形式
         seg_labels = np.eye(self.num_classes+1)[png.reshape([-1])]
-        seg_labels = seg_labels.reshape((int(self.image_size[1]),int(self.image_size[0]),self.num_classes+1))
-        jpg = np.transpose(np.array(jpg),[2,0,1])/255
+        seg_labels = seg_labels.reshape((int(self.image_size[0]), int(self.image_size[1]), self.num_classes+1))
+
+        jpg = np.transpose(np.array(jpg), [2,0,1])/255
 
         return jpg, png, seg_labels
 

@@ -1,15 +1,19 @@
 import argparse
+import base64
 import json
 import os
 import os.path as osp
 import warnings
- 
+
+import numpy as np
 import PIL.Image
 import yaml
-import numpy as np
 from labelme import utils
-import base64
 
+'''
+我使用的labelme版本是3.16.7，建议使用该版本的labelme，有些版本的labelme会发生错误
+此处生成的标签图是8位彩色图，每个像素点的值就是这个像素点所属的种类
+'''
 if __name__ == '__main__':
     jpgs_path = "datasets/JPEGImages"
     pngs_path = "datasets/SegmentationClass"

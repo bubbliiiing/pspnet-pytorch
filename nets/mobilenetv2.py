@@ -1,9 +1,11 @@
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
 import math
 import os
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import torch.utils.model_zoo as model_zoo
+
 BatchNorm2d = nn.BatchNorm2d
 
 def conv_bn(inp, oup, stride):
@@ -30,28 +32,40 @@ class InvertedResidual(nn.Module):
 
         hidden_dim = round(inp * expand_ratio)
         self.use_res_connect = self.stride == 1 and inp == oup
-
+        #----------------------------------------------------#
+        #   利用1x1卷积根据输入进来的通道数进行通道数上升
+        #----------------------------------------------------#
         if expand_ratio == 1:
             self.conv = nn.Sequential(
-                # dw
+                #----------------------------------------------------#
+                #   利用深度可分离卷积进行特征提取
+                #----------------------------------------------------#
                 nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
                 BatchNorm2d(hidden_dim),
                 nn.ReLU6(inplace=True),
-                # pw-linear
+                #----------------------------------------------------#
+                #   利用1x1的卷积进行通道数的下降
+                #----------------------------------------------------#
                 nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
                 BatchNorm2d(oup),
             )
         else:
             self.conv = nn.Sequential(
-                # pw
+                #----------------------------------------------------#
+                #   利用1x1卷积根据输入进来的通道数进行通道数上升
+                #----------------------------------------------------#
                 nn.Conv2d(inp, hidden_dim, 1, 1, 0, bias=False),
                 BatchNorm2d(hidden_dim),
                 nn.ReLU6(inplace=True),
-                # dw
+                #----------------------------------------------------#
+                #   利用深度可分离卷积进行特征提取
+                #----------------------------------------------------#
                 nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
                 BatchNorm2d(hidden_dim),
                 nn.ReLU6(inplace=True),
-                # pw-linear
+                #----------------------------------------------------#
+                #   利用1x1的卷积进行通道数的下降
+                #----------------------------------------------------#
                 nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
                 BatchNorm2d(oup),
             )
@@ -72,7 +86,6 @@ class MobileNetV2(nn.Module):
 
         interverted_residual_setting = [
             # t, c, n, s
-            # 473,473,3 -> 237,237,32
             # 237,237,32 -> 237,237,16
             [1, 16, 1, 1],
             # 237,237,16 -> 119,119,24
@@ -90,10 +103,9 @@ class MobileNetV2(nn.Module):
         ]
         
         assert input_size % 32 == 0
-        # 建立stem层
+        # 473,473,3 -> 237,237,32
         input_channel = int(input_channel * width_mult)
         self.last_channel = int(last_channel * width_mult) if width_mult > 1.0 else last_channel
-
         self.features = [conv_bn(3, input_channel, 2)]
         
         # 根据上述列表进行循环，构建mobilenetv2的结构

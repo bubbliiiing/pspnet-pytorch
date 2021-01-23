@@ -1,19 +1,21 @@
 import time
+
+import numpy as np
 import torch
-import torch.optim as optim
 import torch.backends.cudnn as cudnn
+import torch.optim as optim
 import torchvision.models as models
-import numpy as np 
-from tqdm import tqdm
-from torchvision import models
-from torch.autograd import Variable
 from PIL import Image
 from torch import nn
-from nets.pspnet import PSPNet
-from nets.pspnet_training import CE_Loss,Dice_loss
-from utils.metrics import f_score
+from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from utils.dataloader import pspnet_dataset_collate, PSPnetDataset
+from torchvision import models
+from tqdm import tqdm
+
+from nets.pspnet import PSPNet
+from nets.pspnet_training import CE_Loss, Dice_loss
+from utils.dataloader import PSPnetDataset, pspnet_dataset_collate
+from utils.metrics import f_score
 
 
 def get_lr(optimizer):
@@ -21,13 +23,13 @@ def get_lr(optimizer):
         return param_group['lr']
 
 def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_branch):
-    net = net.train()
     total_loss = 0
     total_f_score = 0
 
     val_toal_loss = 0
     val_total_f_score = 0
-    start_time = time.time()
+
+    net.train()
     with tqdm(total=epoch_size,desc=f'Epoch {epoch + 1}/{Epoch}',postfix=dict,mininterval=0.3) as pbar:
         for iteration, batch in enumerate(gen):
             if iteration >= epoch_size: 
@@ -56,7 +58,6 @@ def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_
                     aux_dice  = Dice_loss(aux_outputs, labels)
                     main_dice = Dice_loss(outputs, labels)
                     loss      = loss + aux_dice + main_dice
-
             else:
                 outputs = net(imgs)
                 loss    = CE_Loss(outputs, pngs, num_classes = NUM_CLASSES)
@@ -76,14 +77,11 @@ def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_
             total_loss += loss.item()
             total_f_score += _f_score.item()
             
-            waste_time = time.time() - start_time
             pbar.set_postfix(**{'total_loss': total_loss / (iteration + 1), 
                                 'f_score'   : total_f_score / (iteration + 1),
-                                's/step'    : waste_time,
                                 'lr'        : get_lr(optimizer)})
             pbar.update(1)
 
-            start_time = time.time()
 
     net.eval()
     print('Start Validation')
@@ -144,8 +142,11 @@ def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_
 
 
 if __name__ == "__main__":
-    inputs_size = [473,473,3]
     log_dir = "logs/"   
+    #------------------------------#
+    #   输入图片的大小
+    #------------------------------#
+    inputs_size = [473,473,3]
     #---------------------#
     #   分类个数+1
     #   2+1
@@ -169,13 +170,15 @@ if __name__ == "__main__":
     #   会占用大量显存
     #---------------------#
     aux_branch = False
-    #---------------------#
+    #------------------------------#
     #   下采样的倍数
-    #   8和16
-    #---------------------#
+    #   16显存占用小
+    #   8显存占用大
+    #------------------------------#
     downsample_factor = 16
     #-------------------------------#
-    #   Cuda的使用
+    #   是否使用Cuda
+    #   没有GPU可以设置成False
     #-------------------------------#
     Cuda = True
 
@@ -185,7 +188,7 @@ if __name__ == "__main__":
     #   权值文件的下载请看README
     #   权值和主干特征提取网络一定要对应
     #-------------------------------------------#
-    model_path = r"model_data/pspnet_mobilenetv2.pth"
+    model_path = "model_data/pspnet_mobilenetv2.pth"
     # 加快模型训练的效率
     print('Loading weights into state dict...')
     model_dict = model.state_dict()
@@ -201,11 +204,11 @@ if __name__ == "__main__":
         net = net.cuda()
 
     # 打开数据集的txt
-    with open(r"VOCdevkit/VOC2007/ImageSets/Segmentation/train.txt","r") as f:
+    with open("VOCdevkit/VOC2007/ImageSets/Segmentation/train.txt","r") as f:
         train_lines = f.readlines()
 
     # 打开数据集的txt
-    with open(r"VOCdevkit/VOC2007/ImageSets/Segmentation/val.txt","r") as f:
+    with open("VOCdevkit/VOC2007/ImageSets/Segmentation/val.txt","r") as f:
         val_lines = f.readlines()
         
     #------------------------------------------------------#
@@ -221,8 +224,9 @@ if __name__ == "__main__":
         Init_Epoch = 0
         Interval_Epoch = 50
         Batch_size = 8
+
         optimizer = optim.Adam(model.parameters(),lr)
-        lr_scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.9)
+        lr_scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.95)
 
         train_dataset = PSPnetDataset(train_lines, inputs_size, NUM_CLASSES, True)
         val_dataset = PSPnetDataset(val_lines, inputs_size, NUM_CLASSES, False)
@@ -246,8 +250,9 @@ if __name__ == "__main__":
         Interval_Epoch = 50
         Epoch = 100
         Batch_size = 4
+
         optimizer = optim.Adam(model.parameters(),lr)
-        lr_scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.9)
+        lr_scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.95)
 
         train_dataset = PSPnetDataset(train_lines, inputs_size, NUM_CLASSES, True)
         val_dataset = PSPnetDataset(val_lines, inputs_size, NUM_CLASSES, False)

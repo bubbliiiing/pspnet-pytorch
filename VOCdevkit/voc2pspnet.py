@@ -1,9 +1,14 @@
 import os
 import random 
+random.seed(0)
  
 segfilepath=r'./VOCdevkit/VOC2007/SegmentationClass'
 saveBasePath=r"./VOCdevkit/VOC2007/ImageSets/Segmentation/"
  
+#----------------------------------------------------------------------#
+#   想要增加测试集修改trainval_percent
+#   修改train_percent用于改变验证集的比例
+#----------------------------------------------------------------------#
 trainval_percent=1
 train_percent=0.9
 
