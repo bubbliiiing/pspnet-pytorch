@@ -64,8 +64,8 @@ class PSPNet(object):
                     (64, 128, 128), (192, 128, 128), (0, 64, 0), (128, 64, 0), (0, 192, 0), (128, 192, 0), (0, 64, 128), (128, 64, 12)]
         else:
             # 画框设置不同的颜色
-            hsv_tuples = [(x / len(self.class_names), 1., 1.)
-                        for x in range(len(self.class_names))]
+            hsv_tuples = [(x / self.num_classes, 1., 1.)
+                        for x in range(self.num_classes)]
             self.colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
             self.colors = list(
                 map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
