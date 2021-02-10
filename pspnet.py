@@ -12,6 +12,19 @@ from torch.autograd import Variable
 from nets.pspnet import PSPNet as pspnet
 
 
+def letterbox_image(image, size):
+    '''resize image with unchanged aspect ratio using padding'''
+    iw, ih = image.size
+    w, h = size
+    scale = min(w/iw, h/ih)
+    nw = int(iw*scale)
+    nh = int(ih*scale)
+
+    image = image.resize((nw,nh), Image.BICUBIC)
+    new_image = Image.new('RGB', size, (128,128,128))
+    new_image.paste(image, ((w-nw)//2, (h-nh)//2))
+    return new_image,nw,nh
+
 #--------------------------------------------#
 #   使用自己训练好的模型预测需要修改3个参数
 #   model_path、backbone和num_classes都需要修改！
@@ -21,17 +34,23 @@ from nets.pspnet import PSPNet as pspnet
 #--------------------------------------------#
 class PSPNet(object):
     _defaults = {
-        "model_path"        :   'model_data/pspnet_mobilenetv2.pth',
-        "model_image_size"  :   (473, 473, 3),
-        "backbone"          :   "mobilenet",
-        "downsample_factor" :   16,
-        "num_classes"       :   21,
-        "cuda"              :   True,
+        "model_path"        : 'model_data/pspnet_mobilenetv2.pth',
+        "model_image_size"  : (473, 473, 3),
+        "backbone"          : "mobilenet",
+        "downsample_factor" : 16,
+        "num_classes"       : 21,
+        "cuda"              : True,
         #--------------------------------#
         #   blend参数用于控制是否
         #   让识别结果和原图混合
         #--------------------------------#
-        "blend"             :   True,
+        "blend"             : True,
+        #---------------------------------------------------------------------#
+        #   该变量用于控制是否使用letterbox_image对输入图像进行不失真的resize，
+        #   True和False都可以尝试一下，有些时候正效果，有些时候负效果，比较玄学
+        #   默认设置为预训练数据集中效果比较好的设置方式。
+        #---------------------------------------------------------------------#
+        "letterbox_image"   : True,
     }
 
     #---------------------------------------------------#
@@ -71,19 +90,6 @@ class PSPNet(object):
                 map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
                     self.colors))
 
-    def letterbox_image(self ,image, size):
-        '''resize image with unchanged aspect ratio using padding'''
-        iw, ih = image.size
-        w, h = size
-        scale = min(w/iw, h/ih)
-        nw = int(iw*scale)
-        nh = int(ih*scale)
-
-        image = image.resize((nw,nh), Image.BICUBIC)
-        new_image = Image.new('RGB', size, (128,128,128))
-        new_image.paste(image, ((w-nw)//2, (h-nh)//2))
-        return new_image,nw,nh
-
     #---------------------------------------------------#
     #   检测图片
     #---------------------------------------------------#
@@ -98,7 +104,11 @@ class PSPNet(object):
         #---------------------------------------------------#
         #   进行不失真的resize，添加灰条，进行图像归一化
         #---------------------------------------------------#
-        image, nw, nh = self.letterbox_image(image, (self.model_image_size[1],self.model_image_size[0]))
+        if self.letterbox_image:
+            image, nw, nh = letterbox_image(image,(self.model_image_size[1],self.model_image_size[0]))
+        else:
+            image = image.convert('RGB')
+            image = image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
         images = [np.array(image)/255]
         images = np.transpose(images,(0,3,1,2))
 
@@ -118,8 +128,9 @@ class PSPNet(object):
             #--------------------------------------#
             #   将灰条部分截取掉
             #--------------------------------------#
-            pr = pr[int((self.model_image_size[0]-nh)//2):int((self.model_image_size[0]-nh)//2+nh), int((self.model_image_size[1]-nw)//2):int((self.model_image_size[1]-nw)//2+nw)]
-
+            if self.letterbox_image:
+                pr = pr[int((self.model_image_size[0]-nh)//2):int((self.model_image_size[0]-nh)//2+nh), int((self.model_image_size[1]-nw)//2):int((self.model_image_size[1]-nw)//2+nw)]
+            
         #------------------------------------------------#
         #   创建一副新图，并根据每个像素点的种类赋予颜色
         #------------------------------------------------#
