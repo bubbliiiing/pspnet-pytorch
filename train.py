@@ -1,19 +1,12 @@
-import time
-
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
-import torchvision.models as models
-from PIL import Image
-from torch import nn
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
-from torchvision import models
 from tqdm import tqdm
-
+import os
 from nets.pspnet import PSPNet
-from nets.pspnet_training import CE_Loss, Dice_loss
+from nets.pspnet_training import CE_Loss, Dice_loss, weights_init
 from utils.dataloader import PSPnetDataset, pspnet_dataset_collate
 from utils.metrics import f_score
 
@@ -23,13 +16,14 @@ def get_lr(optimizer):
         return param_group['lr']
 
 def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_branch):
-    total_loss = 0
-    total_f_score = 0
+    total_loss          = 0
+    total_f_score       = 0
 
-    val_toal_loss = 0
-    val_total_f_score = 0
+    val_toal_loss       = 0
+    val_total_f_score   = 0
 
     net.train()
+    print('Start Train')
     with tqdm(total=epoch_size,desc=f'Epoch {epoch + 1}/{Epoch}',postfix=dict,mininterval=0.3) as pbar:
         for iteration, batch in enumerate(gen):
             if iteration >= epoch_size: 
@@ -37,13 +31,13 @@ def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_
             imgs, pngs, labels = batch
 
             with torch.no_grad():
-                imgs = Variable(torch.from_numpy(imgs).type(torch.FloatTensor))
-                pngs = Variable(torch.from_numpy(pngs).type(torch.FloatTensor)).long()
-                labels = Variable(torch.from_numpy(labels).type(torch.FloatTensor))
+                imgs    = torch.from_numpy(imgs).type(torch.FloatTensor)
+                pngs    = torch.from_numpy(pngs).type(torch.FloatTensor).long()
+                labels  = torch.from_numpy(labels).type(torch.FloatTensor)
                 if cuda:
-                    imgs = imgs.cuda()
-                    pngs = pngs.cuda()
-                    labels = labels.cuda()
+                    imgs    = imgs.cuda()
+                    pngs    = pngs.cuda()
+                    labels  = labels.cuda()
 
             #-------------------------------#
             #   判断是否使用辅助分支并回传
@@ -74,8 +68,8 @@ def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_
             loss.backward()
             optimizer.step()
 
-            total_loss += loss.item()
-            total_f_score += _f_score.item()
+            total_loss      += loss.item()
+            total_f_score   += _f_score.item()
             
             pbar.set_postfix(**{'total_loss': total_loss / (iteration + 1), 
                                 'f_score'   : total_f_score / (iteration + 1),
@@ -91,13 +85,13 @@ def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_
                 break
             imgs, pngs, labels = batch
             with torch.no_grad():
-                imgs = Variable(torch.from_numpy(imgs).type(torch.FloatTensor))
-                pngs = Variable(torch.from_numpy(pngs).type(torch.FloatTensor)).long()
-                labels = Variable(torch.from_numpy(labels).type(torch.FloatTensor))
+                imgs    = torch.from_numpy(imgs).type(torch.FloatTensor)
+                pngs    = torch.from_numpy(pngs).type(torch.FloatTensor).long()
+                labels  = torch.from_numpy(labels).type(torch.FloatTensor)
                 if cuda:
-                    imgs = imgs.cuda()
-                    pngs = pngs.cuda()
-                    labels = labels.cuda()
+                    imgs    = imgs.cuda()
+                    pngs    = pngs.cuda()
+                    labels  = labels.cuda()
                 #-------------------------------#
                 #   判断是否使用辅助分支
                 #-------------------------------#
@@ -123,23 +117,20 @@ def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_
                 #-------------------------------#
                 _f_score = f_score(outputs, labels)
 
-                val_toal_loss += val_loss.item()
-                val_total_f_score += _f_score.item()
+                val_toal_loss       += val_loss.item()
+                val_total_f_score   += _f_score.item()
                 
             
             pbar.set_postfix(**{'total_loss': val_toal_loss / (iteration + 1),
                                 'f_score'   : val_total_f_score / (iteration + 1),
                                 'lr'        : get_lr(optimizer)})
             pbar.update(1)
-    net.train()
+
     print('Finish Validation')
     print('Epoch:'+ str(epoch+1) + '/' + str(Epoch))
     print('Total Loss: %.4f || Val Loss: %.4f ' % (total_loss/(epoch_size+1),val_toal_loss/(epoch_size_val+1)))
-
     print('Saving state, iter:', str(epoch+1))
     torch.save(model.state_dict(), 'logs/Epoch%d-Total_Loss%.4f-Val_Loss%.4f.pth'%((epoch+1),total_loss/(epoch_size+1),val_toal_loss/(epoch_size_val+1)))
-
-
 
 if __name__ == "__main__":
     log_dir = "logs/"   
@@ -181,9 +172,14 @@ if __name__ == "__main__":
     #   没有GPU可以设置成False
     #-------------------------------#
     Cuda = True
+    #------------------------------#
+    #   数据集路径
+    #------------------------------#
+    dataset_path = "VOCdevkit/VOC2007/"
 
     model = PSPNet(num_classes=NUM_CLASSES, backbone=backbone, downsample_factor=downsample_factor, pretrained=pretrained, aux_branch=aux_branch).train()
-    
+    if not pretrained:
+        weights_init(model)
     #-------------------------------------------#
     #   权值文件的下载请看README
     #   权值和主干特征提取网络一定要对应
@@ -204,11 +200,11 @@ if __name__ == "__main__":
         net = net.cuda()
 
     # 打开数据集的txt
-    with open("VOCdevkit/VOC2007/ImageSets/Segmentation/train.txt","r") as f:
+    with open(os.path.join(dataset_path, "ImageSets/Segmentation/train.txt"),"r") as f:
         train_lines = f.readlines()
 
     # 打开数据集的txt
-    with open("VOCdevkit/VOC2007/ImageSets/Segmentation/val.txt","r") as f:
+    with open(os.path.join(dataset_path, "ImageSets/Segmentation/val.txt"),"r") as f:
         val_lines = f.readlines()
         
     #------------------------------------------------------#
@@ -220,23 +216,26 @@ if __name__ == "__main__":
     #   提示OOM或者显存不足请调小Batch_size
     #------------------------------------------------------#
     if True:
-        lr = 1e-4
-        Init_Epoch = 0
-        Interval_Epoch = 50
-        Batch_size = 8
+        lr              = 1e-4
+        Init_Epoch      = 0
+        Interval_Epoch  = 50
+        Batch_size      = 8
 
-        optimizer = optim.Adam(model.parameters(),lr)
-        lr_scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.95)
+        optimizer       = optim.Adam(model.parameters(),lr)
+        lr_scheduler    = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.95)
 
-        train_dataset = PSPnetDataset(train_lines, inputs_size, NUM_CLASSES, True)
-        val_dataset = PSPnetDataset(val_lines, inputs_size, NUM_CLASSES, False)
-        gen = DataLoader(train_dataset, shuffle=True, batch_size=Batch_size, num_workers=1, pin_memory=True,
-                                drop_last=True, collate_fn=pspnet_dataset_collate)
-        gen_val = DataLoader(val_dataset, shuffle=True, batch_size=Batch_size, num_workers=4,pin_memory=True, 
-                                drop_last=True, collate_fn=pspnet_dataset_collate)
+        train_dataset   = PSPnetDataset(train_lines, inputs_size, NUM_CLASSES, True, dataset_path)
+        val_dataset     = PSPnetDataset(val_lines, inputs_size, NUM_CLASSES, False, dataset_path)
+        gen             = DataLoader(train_dataset, shuffle=True, batch_size=Batch_size, num_workers=1, pin_memory=True,
+                                    drop_last=True, collate_fn=pspnet_dataset_collate)
+        gen_val         = DataLoader(val_dataset, shuffle=True, batch_size=Batch_size, num_workers=4,pin_memory=True, 
+                                    drop_last=True, collate_fn=pspnet_dataset_collate)
 
-        epoch_size      = max(1, len(train_lines)//Batch_size)
-        epoch_size_val  = max(1, len(val_lines)//Batch_size)
+        epoch_size      = len(train_lines) // Batch_size
+        epoch_size_val  = len(val_lines) // Batch_size
+
+        if epoch_size == 0 or epoch_size_val == 0:
+            raise ValueError("数据集过小，无法进行训练，请扩充数据集。")
 
         for param in model.backbone.parameters():
             param.requires_grad = False
@@ -246,23 +245,26 @@ if __name__ == "__main__":
             lr_scheduler.step()
     
     if True:
-        lr = 1e-5
-        Interval_Epoch = 50
-        Epoch = 100
-        Batch_size = 4
+        lr              = 1e-5
+        Interval_Epoch  = 50
+        Epoch           = 100
+        Batch_size      = 4
 
-        optimizer = optim.Adam(model.parameters(),lr)
-        lr_scheduler = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.95)
+        optimizer       = optim.Adam(model.parameters(),lr)
+        lr_scheduler    = optim.lr_scheduler.StepLR(optimizer,step_size=1,gamma=0.95)
 
-        train_dataset = PSPnetDataset(train_lines, inputs_size, NUM_CLASSES, True)
-        val_dataset = PSPnetDataset(val_lines, inputs_size, NUM_CLASSES, False)
-        gen = DataLoader(train_dataset, shuffle=True, batch_size=Batch_size, num_workers=4, pin_memory=True,
-                                drop_last=True, collate_fn=pspnet_dataset_collate)
-        gen_val = DataLoader(val_dataset, shuffle=True, batch_size=Batch_size, num_workers=4,pin_memory=True, 
-                                drop_last=True, collate_fn=pspnet_dataset_collate)
+        train_dataset   = PSPnetDataset(train_lines, inputs_size, NUM_CLASSES, True, dataset_path)
+        val_dataset     = PSPnetDataset(val_lines, inputs_size, NUM_CLASSES, False, dataset_path)
+        gen             = DataLoader(train_dataset, shuffle=True, batch_size=Batch_size, num_workers=4, pin_memory=True,
+                                    drop_last=True, collate_fn=pspnet_dataset_collate)
+        gen_val         = DataLoader(val_dataset, shuffle=True, batch_size=Batch_size, num_workers=4,pin_memory=True, 
+                                    drop_last=True, collate_fn=pspnet_dataset_collate)
 
-        epoch_size      = max(1, len(train_lines)//Batch_size)
-        epoch_size_val  = max(1, len(val_lines)//Batch_size)
+        epoch_size      = len(train_lines) // Batch_size
+        epoch_size_val  = len(val_lines) // Batch_size
+
+        if epoch_size == 0 or epoch_size_val == 0:
+            raise ValueError("数据集过小，无法进行训练，请扩充数据集。")
 
         for param in model.backbone.parameters():
             param.requires_grad = True

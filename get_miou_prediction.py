@@ -6,11 +6,11 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
-from torch import nn
 from torch.autograd import Variable
 from tqdm import tqdm
 
 from pspnet import PSPNet
+
 
 def letterbox_image(image, size):
     '''resize image with unchanged aspect ratio using padding'''

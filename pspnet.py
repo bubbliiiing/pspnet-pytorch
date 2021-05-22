@@ -1,13 +1,13 @@
 import colorsys
 import copy
 import os
+import time
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
 from torch import nn
-from torch.autograd import Variable
 
 from nets.pspnet import PSPNet as pspnet
 
@@ -72,7 +72,6 @@ class PSPNet(object):
         state_dict = torch.load(self.model_path)
         self.net.load_state_dict(state_dict, strict=False)
         if self.cuda:
-            os.environ["CUDA_VISIBLE_DEVICES"] = '0'
             self.net = nn.DataParallel(self.net)
             self.net = self.net.cuda()
         print('{} model, anchors, and classes loaded.'.format(self.model_path))
@@ -89,11 +88,17 @@ class PSPNet(object):
             self.colors = list(
                 map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
                     self.colors))
+            self.colors = (0, 0, 0)
 
     #---------------------------------------------------#
     #   检测图片
     #---------------------------------------------------#
     def detect_image(self, image):
+        #---------------------------------------------------------#
+        #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
+        #---------------------------------------------------------#
+        image = image.convert('RGB')
+
         #---------------------------------------------------#
         #   对输入图像进行一个备份，后面用于绘图
         #---------------------------------------------------#
@@ -107,13 +112,12 @@ class PSPNet(object):
         if self.letterbox_image:
             image, nw, nh = letterbox_image(image,(self.model_image_size[1],self.model_image_size[0]))
         else:
-            image = image.convert('RGB')
             image = image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
         images = [np.array(image)/255]
         images = np.transpose(images,(0,3,1,2))
 
         with torch.no_grad():
-            images = Variable(torch.from_numpy(images).type(torch.FloatTensor))
+            images = torch.from_numpy(images).type(torch.FloatTensor)
             if self.cuda:
                 images = images.cuda()
 
@@ -153,3 +157,49 @@ class PSPNet(object):
         
         return image
 
+    def get_FPS(self, image, test_interval):
+        orininal_h = np.array(image).shape[0]
+        orininal_w = np.array(image).shape[1]
+
+        #---------------------------------------------------#
+        #   进行不失真的resize，添加灰条，进行图像归一化
+        #---------------------------------------------------#
+        if self.letterbox_image:
+            image, nw, nh = letterbox_image(image,(self.model_image_size[1],self.model_image_size[0]))
+        else:
+            image = image.convert('RGB')
+            image = image.resize((self.model_image_size[1],self.model_image_size[0]), Image.BICUBIC)
+        images = [np.array(image)/255]
+        images = np.transpose(images,(0,3,1,2))
+        
+        with torch.no_grad():
+            images = torch.from_numpy(images).type(torch.FloatTensor)
+            if self.cuda:
+                images = images.cuda()
+            pr = self.net(images)[0]
+            pr = F.softmax(pr.permute(1,2,0),dim = -1).cpu().numpy().argmax(axis=-1)
+            #--------------------------------------#
+            #   将灰条部分截取掉
+            #--------------------------------------#
+            if self.letterbox_image:
+                pr = pr[int((self.model_image_size[0]-nh)//2):int((self.model_image_size[0]-nh)//2+nh), int((self.model_image_size[1]-nw)//2):int((self.model_image_size[1]-nw)//2+nw)]
+            
+        image = Image.fromarray(np.uint8(pr)).resize((orininal_w,orininal_h),Image.NEAREST)
+
+        t1 = time.time()
+        for _ in range(test_interval):
+            with torch.no_grad():
+                pr = self.net(images)[0]
+                pr = F.softmax(pr.permute(1,2,0),dim = -1).cpu().numpy().argmax(axis=-1)
+                #--------------------------------------#
+                #   将灰条部分截取掉
+                #--------------------------------------#
+                if self.letterbox_image:
+                    pr = pr[int((self.model_image_size[0]-nh)//2):int((self.model_image_size[0]-nh)//2+nh), int((self.model_image_size[1]-nw)//2):int((self.model_image_size[1]-nw)//2+nw)]
+                
+            image = Image.fromarray(np.uint8(pr)).resize((orininal_w,orininal_h),Image.NEAREST)
+
+        t2 = time.time()
+        tact_time = (t2 - t1) / test_interval
+        return tact_time
+        

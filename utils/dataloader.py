@@ -1,15 +1,11 @@
-from random import shuffle
-import numpy as np
-import torch
-import torch.nn as nn
-import math
-import torch.nn.functional as F
-from PIL import Image
-from torch.autograd import Variable
-from torch.utils.data import DataLoader
-from torch.utils.data.dataset import Dataset
-from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
+
+import os
+
 import cv2
+import numpy as np
+from PIL import Image
+from torch.utils.data.dataset import Dataset
+
 
 def letterbox_image(image, label , size):
     label = Image.fromarray(np.array(label))
@@ -33,14 +29,14 @@ def rand(a=0, b=1):
     return np.random.rand()*(b-a) + a
 
 class PSPnetDataset(Dataset):
-    def __init__(self,train_lines,image_size,num_classes,random_data):
+    def __init__(self,train_lines,image_size,num_classes,random_data,dataset_path):
         super(PSPnetDataset, self).__init__()
-
-        self.train_lines = train_lines
-        self.train_batches = len(train_lines)
-        self.image_size = image_size
-        self.num_classes = num_classes
-        self.random_data = random_data
+        self.train_lines    = train_lines
+        self.train_batches  = len(train_lines)
+        self.image_size     = image_size
+        self.num_classes    = num_classes
+        self.random_data    = random_data
+        self.dataset_path   = dataset_path
 
     def __len__(self):
         return self.train_batches
@@ -106,20 +102,24 @@ class PSPnetDataset(Dataset):
         annotation_line = self.train_lines[index]
         name = annotation_line.split()[0]
         
-        # 从文件中读取图像
-        jpg = Image.open(r"./VOCdevkit/VOC2007/JPEGImages" + '/' + name + ".jpg")
-        png = Image.open(r"./VOCdevkit/VOC2007/SegmentationClass" + '/' + name + ".png")
+        #-------------------------------------------------------#
+        #   从文件中读取图像
+        #-------------------------------------------------------#
+        jpg = Image.open(os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".jpg"))
+        png = Image.open(os.path.join(os.path.join(self.dataset_path, "SegmentationClass"), name + ".png"))
 
         if self.random_data:
             jpg, png = self.get_random_data(jpg,png,(int(self.image_size[0]),int(self.image_size[1])))
         else:
             jpg, png = letterbox_image(jpg, png, (int(self.image_size[1]),int(self.image_size[0])))
 
-        # 从文件中读取图像
         png = np.array(png)
         png[png >= self.num_classes] = self.num_classes
-        
-        # 转化成one_hot的形式
+        #-------------------------------------------------------#
+        #   转化成one_hot的形式
+        #   在这里需要+1是因为voc数据集有些标签具有白边部分
+        #   我们需要将白边部分进行忽略，+1的目的是方便忽略。
+        #-------------------------------------------------------#
         seg_labels = np.eye(self.num_classes+1)[png.reshape([-1])]
         seg_labels = seg_labels.reshape((int(self.image_size[0]), int(self.image_size[1]), self.num_classes+1))
 
