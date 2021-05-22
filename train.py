@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import os
 from nets.pspnet import PSPNet
-from nets.pspnet_training import CE_Loss, Dice_loss, weights_init
+from nets.pspnet_training import CE_Loss, Dice_loss, LossHistory, weights_init
 from utils.dataloader import PSPnetDataset, pspnet_dataset_collate
 from utils.metrics import f_score
 
@@ -126,6 +126,7 @@ def fit_one_epoch(net,epoch,epoch_size,epoch_size_val,gen,genval,Epoch,cuda,aux_
                                 'lr'        : get_lr(optimizer)})
             pbar.update(1)
 
+    loss_history.append_loss(total_loss/(epoch_size+1), val_loss/(epoch_size_val+1))
     print('Finish Validation')
     print('Epoch:'+ str(epoch+1) + '/' + str(Epoch))
     print('Total Loss: %.4f || Val Loss: %.4f ' % (total_loss/(epoch_size+1),val_toal_loss/(epoch_size_val+1)))
@@ -180,6 +181,7 @@ if __name__ == "__main__":
     model = PSPNet(num_classes=NUM_CLASSES, backbone=backbone, downsample_factor=downsample_factor, pretrained=pretrained, aux_branch=aux_branch).train()
     if not pretrained:
         weights_init(model)
+        
     #-------------------------------------------#
     #   权值文件的下载请看README
     #   权值和主干特征提取网络一定要对应
@@ -194,6 +196,8 @@ if __name__ == "__main__":
     model.load_state_dict(model_dict)
     print('Finished!')
 
+    loss_history = LossHistory("logs/")
+    
     if Cuda:
         net = torch.nn.DataParallel(model)
         cudnn.benchmark = True
