@@ -23,6 +23,13 @@ torch==1.2.0
 ### 注意事项
 代码中的pspnet_mobilenetv2.pth和pspnet_resnet50.pth是基于VOC拓展数据集训练的。训练和预测时注意修改backbone。    
 
+### 文件下载
+训练所需的pspnet_mobilenetv2.pth和pspnet_resnet50.pth可在百度网盘中下载。    
+链接: https://pan.baidu.com/s/1-k5i-NaqV9aEMoQjW5b0CA 提取码: ihnu    
+
+VOC拓展数据集的百度网盘如下：  
+链接: https://pan.baidu.com/s/1BrR7AUM1XJvPWjKMIy2uEw 提取码: vszf    
+
 ### 训练步骤
 #### a、训练voc数据集
 1、将我提供的voc数据集放入VOCdevkit中（无需运行voc_annotation.py）。  
@@ -38,21 +45,14 @@ torch==1.2.0
 6、注意修改train.py的num_classes为分类个数+1。    
 7、运行train.py即可开始训练。  
 
-## 文件下载
-训练所需的pspnet_mobilenetv2.pth和pspnet_resnet50.pth可在百度网盘中下载。    
-链接: https://pan.baidu.com/s/1-k5i-NaqV9aEMoQjW5b0CA 提取码: ihnu    
-
-VOC拓展数据集的百度网盘如下：  
-链接: https://pan.baidu.com/s/1BrR7AUM1XJvPWjKMIy2uEw 提取码: vszf    
-
-## 预测步骤
-### a、使用预训练权重
+### 预测步骤
+#### a、使用预训练权重
 1. 下载完库后解压，如果想用backbone为mobilenet的进行预测，直接运行predict.py就可以了；如果想要利用backbone为resnet50的进行预测，在百度网盘下载pspnet_resnet50.pth，放入model_data，修改pspnet.py的backbone和model_path之后再运行predict.py，输入。  
 ```python
 img/street.jpg
 ```  
 2. 在predict.py里面进行设置可以进行fps测试和video视频检测。    
-### b、使用自己训练的权重
+#### b、使用自己训练的权重
 1. 按照训练步骤训练。    
 2. 在pspnet.py文件里面，在如下部分修改model_path和backbone使其对应训练好的文件；**model_path对应logs文件夹下面的权值文件，backbone是所使用的主干特征提取网络**。    
 ```python
