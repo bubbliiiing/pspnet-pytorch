@@ -1,9 +1,6 @@
-import math
-
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torchvision import models
 
 from nets.mobilenetv2 import mobilenetv2
 from nets.resnet import resnet50

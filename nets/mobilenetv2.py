@@ -15,14 +15,12 @@ def conv_bn(inp, oup, stride):
         nn.ReLU6(inplace=True)
     )
 
-
 def conv_1x1_bn(inp, oup):
     return nn.Sequential(
         nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
         BatchNorm2d(oup),
         nn.ReLU6(inplace=True)
     )
-
 
 class InvertedResidual(nn.Module):
     def __init__(self, inp, oup, stride, expand_ratio):
@@ -75,7 +73,6 @@ class InvertedResidual(nn.Module):
             return x + self.conv(x)
         else:
             return self.conv(x)
-
 
 class MobileNetV2(nn.Module):
     def __init__(self, n_class=1000, input_size=224, width_mult=1.):
@@ -150,7 +147,6 @@ class MobileNetV2(nn.Module):
                 n = m.weight.size(1)
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
-
 
 def load_url(url, model_dir='./model_data', map_location=None):
     if not os.path.exists(model_dir):
