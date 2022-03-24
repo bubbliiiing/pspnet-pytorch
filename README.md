@@ -25,10 +25,10 @@ torch==1.2.0
 
 ### 文件下载
 训练所需的pspnet_mobilenetv2.pth和pspnet_resnet50.pth可在百度网盘中下载。    
-链接: https://pan.baidu.com/s/1-k5i-NaqV9aEMoQjW5b0CA 提取码: ihnu    
+链接: https://pan.baidu.com/s/1Ecz-l6lFcf6HmeX_pLCXZw 提取码: wps9    
 
 VOC拓展数据集的百度网盘如下：  
-链接: https://pan.baidu.com/s/1BrR7AUM1XJvPWjKMIy2uEw 提取码: vszf    
+链接: https://pan.baidu.com/s/1vkk3lMheUm6IjTXznlg7Ng 提取码: 44mk   
 
 ### 训练步骤
 #### a、训练voc数据集
