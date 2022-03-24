@@ -18,6 +18,13 @@ BiliBili视频中的原仓库地址为：https://github.com/bubbliiiing/pspnet-p
 
 **`2020-08`**:**创建仓库、支持多backbone、支持数据miou评估、标注数据处理、大量注释等。**
 
+## 相关仓库
+| 模型 | 路径 |
+| :----- | :----- |
+Unet | https://github.com/bubbliiiing/unet-pytorch  
+PSPnet | https://github.com/bubbliiiing/pspnet-pytorch
+deeplabv3+ | https://github.com/bubbliiiing/deeplabv3-plus-pytorch
+
 ### 性能情况
 | 训练数据集 | 权值文件名称 | 测试数据集 | 输入图片大小 | mIOU | 
 | :-----: | :-----: | :------: | :------: | :------: | 
