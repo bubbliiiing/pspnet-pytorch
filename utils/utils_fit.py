@@ -1,10 +1,14 @@
+import os
+
 import torch
-from tqdm import tqdm
 from nets.pspnet_training import CE_Loss, Dice_loss, Focal_Loss
+from tqdm import tqdm
+
 from utils.utils import get_lr
 from utils.utils_metrics import f_score
 
-def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen, gen_val, Epoch, cuda, dice_loss, focal_loss, cls_weights, aux_branch, num_classes, save_period):
+
+def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen, gen_val, Epoch, cuda, dice_loss, focal_loss, cls_weights, aux_branch, num_classes, save_period, save_dir):
     total_loss      = 0
     total_f_score   = 0
 
@@ -34,16 +38,16 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
             if aux_branch:
                 aux_outputs, outputs = model_train(imgs)
                 if focal_loss:
-                    aux_loss  = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                    aux_loss  = Focal_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
                     main_loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
                 else:
                     aux_loss  = CE_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
                     main_loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
-                loss      = aux_loss + main_loss
+                loss      = aux_loss * 0.4 + main_loss
                 if dice_loss:
                     aux_dice  = Dice_loss(aux_outputs, labels)
                     main_dice = Dice_loss(outputs, labels)
-                    loss      = loss + aux_dice + main_dice
+                    loss      = loss + aux_dice * 0.4 + main_dice
             else:
                 outputs = model_train(imgs)
                 if focal_loss:
@@ -97,16 +101,16 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
                 if aux_branch:
                     aux_outputs, outputs = model_train(imgs)
                     if focal_loss:
-                        aux_loss  = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                        aux_loss  = Focal_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
                         main_loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
                     else:
                         aux_loss  = CE_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
                         main_loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
-                    loss      = aux_loss + main_loss
+                    loss      = aux_loss * 0.4 + main_loss
                     if dice_loss:
                         aux_dice  = Dice_loss(aux_outputs, labels)
                         main_dice = Dice_loss(outputs, labels)
-                        loss      = loss + aux_dice + main_dice
+                        loss      = loss + aux_dice * 0.4 + main_dice
                 else:
                     outputs = model_train(imgs)
                     if focal_loss:
@@ -136,4 +140,4 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
     print('Epoch:'+ str(epoch + 1) + '/' + str(Epoch))
     print('Total Loss: %.3f || Val Loss: %.3f ' % (total_loss / epoch_step, val_loss / epoch_step_val))
     if (epoch + 1) % save_period == 0 or epoch + 1 == Epoch:
-        torch.save(model.state_dict(), 'logs/ep%03d-loss%.3f-val_loss%.3f.pth' % (epoch + 1, total_loss / epoch_step, val_loss / epoch_step_val))
+        torch.save(model.state_dict(), os.path.join(save_dir, 'ep%03d-loss%.3f-val_loss%.3f.pth' % (epoch + 1, total_loss / epoch_step, val_loss / epoch_step_val)))

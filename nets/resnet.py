@@ -4,8 +4,6 @@ import os
 import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
-import torchvision
-
 BatchNorm2d = nn.BatchNorm2d
 
 model_urls = {
