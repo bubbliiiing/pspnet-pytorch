@@ -103,13 +103,32 @@ class PSPnetDataset(Dataset):
         dx = int(self.rand(0, w-nw))
         dy = int(self.rand(0, h-nh))
         new_image = Image.new('RGB', (w,h), (128,128,128))
-        new_label = Image.new('L', (w,h), (0))
+        new_label = Image.new('L', (w,h), (255))
         new_image.paste(image, (dx, dy))
         new_label.paste(label, (dx, dy))
         image = new_image
         label = new_label
 
         image_data      = np.array(image, np.uint8)
+
+        #------------------------------------------#
+        #   高斯模糊
+        #------------------------------------------#
+        blur = self.rand() < 0.5
+        if blur: 
+            image_data = cv2.GaussianBlur(image_data, (5, 5), 0)
+
+        #------------------------------------------#
+        #   旋转
+        #------------------------------------------#
+        rotate = self.rand() < 0.5
+        if rotate: 
+            center      = (w // 2, h // 2)
+            rotation    = np.random.randint(-10, 11)
+            M           = cv2.getRotationMatrix2D(center, -rotation, scale=1)
+            image_data  = cv2.warpAffine(image_data, M, (w, h), flags=cv2.INTER_CUBIC, borderValue=(128,128,128))
+            label       = cv2.warpAffine(np.array(label, np.uint8), M, (w, h), flags=cv2.INTER_NEAREST, borderValue=(255))
+
         #---------------------------------#
         #   对图像进行色域变换
         #   计算色域变换的参数

@@ -43,6 +43,12 @@ if __name__ == "__main__":
     #           没有GPU可以设置成False
     #---------------------------------#
     Cuda = True
+    #------------------------------------------------------------------#
+    #   fp16            是否使用混合精度训练
+    #                   可减少约一半的显存
+    #                   需要pytorch1.6.0以上
+    #------------------------------------------------------------------#
+    fp16        = False
     #-----------------------------------------------------#
     #   num_classes     训练自己的数据集必须要修改的
     #                   自己需要的分类个数+1，如2+1
@@ -236,6 +242,11 @@ if __name__ == "__main__":
         model.load_state_dict(model_dict)
 
     loss_history    = LossHistory(save_dir, model, input_shape=input_shape)
+    if fp16:
+        from torch.cuda.amp import GradScaler as GradScaler
+        scaler = GradScaler()
+    else:
+        scaler = None
 
     model_train = model.train()
     if Cuda:
@@ -356,6 +367,6 @@ if __name__ == "__main__":
             set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
 
             fit_one_epoch(model_train, model, loss_history, optimizer, epoch, 
-                    epoch_step, epoch_step_val, gen, gen_val, UnFreeze_Epoch, Cuda, dice_loss, focal_loss, cls_weights, aux_branch, num_classes, save_period, save_dir)
+                    epoch_step, epoch_step_val, gen, gen_val, UnFreeze_Epoch, Cuda, dice_loss, focal_loss, cls_weights, aux_branch, num_classes, fp16, scaler, save_period, save_dir)
 
         loss_history.writer.close()

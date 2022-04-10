@@ -8,7 +8,7 @@ from utils.utils import get_lr
 from utils.utils_metrics import f_score
 
 
-def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen, gen_val, Epoch, cuda, dice_loss, focal_loss, cls_weights, aux_branch, num_classes, save_period, save_dir):
+def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step, epoch_step_val, gen, gen_val, Epoch, cuda, dice_loss, focal_loss, cls_weights, aux_branch, num_classes, fp16, scaler, save_period, save_dir):
     total_loss      = 0
     total_f_score   = 0
 
@@ -35,38 +35,78 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
                     weights = weights.cuda()
 
             optimizer.zero_grad()
-            if aux_branch:
-                aux_outputs, outputs = model_train(imgs)
-                if focal_loss:
-                    aux_loss  = Focal_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
-                    main_loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+            if not fp16:
+                if aux_branch:
+                    aux_outputs, outputs = model_train(imgs)
+                    if focal_loss:
+                        aux_loss  = Focal_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
+                        main_loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                    else:
+                        aux_loss  = CE_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
+                        main_loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
+                    loss      = aux_loss * 0.4 + main_loss
+                    if dice_loss:
+                        aux_dice  = Dice_loss(aux_outputs, labels)
+                        main_dice = Dice_loss(outputs, labels)
+                        loss      = loss + aux_dice * 0.4 + main_dice
                 else:
-                    aux_loss  = CE_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
-                    main_loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
-                loss      = aux_loss * 0.4 + main_loss
-                if dice_loss:
-                    aux_dice  = Dice_loss(aux_outputs, labels)
-                    main_dice = Dice_loss(outputs, labels)
-                    loss      = loss + aux_dice * 0.4 + main_dice
+                    outputs = model_train(imgs)
+                    if focal_loss:
+                        loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                    else:
+                        loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
+
+                    if dice_loss:
+                        main_dice = Dice_loss(outputs, labels)
+                        loss      = loss + main_dice
+
+                with torch.no_grad():
+                    #-------------------------------#
+                    #   计算f_score
+                    #-------------------------------#
+                    _f_score = f_score(outputs, labels)
+
+                loss.backward()
+                optimizer.step()
             else:
-                outputs = model_train(imgs)
-                if focal_loss:
-                    loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
-                else:
-                    loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
+                from torch.cuda.amp import autocast
+                with autocast():
+                    if aux_branch:
+                        aux_outputs, outputs = model_train(imgs)
+                        if focal_loss:
+                            aux_loss  = Focal_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
+                            main_loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                        else:
+                            aux_loss  = CE_Loss(aux_outputs, pngs, weights, num_classes = num_classes)
+                            main_loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
+                        loss      = aux_loss * 0.4 + main_loss
+                        if dice_loss:
+                            aux_dice  = Dice_loss(aux_outputs, labels)
+                            main_dice = Dice_loss(outputs, labels)
+                            loss      = loss + aux_dice * 0.4 + main_dice
+                    else:
+                        outputs = model_train(imgs)
+                        if focal_loss:
+                            loss = Focal_Loss(outputs, pngs, weights, num_classes = num_classes)
+                        else:
+                            loss = CE_Loss(outputs, pngs, weights, num_classes = num_classes)
 
-                if dice_loss:
-                    main_dice = Dice_loss(outputs, labels)
-                    loss      = loss + main_dice
+                        if dice_loss:
+                            main_dice = Dice_loss(outputs, labels)
+                            loss      = loss + main_dice
 
-            with torch.no_grad():
-                #-------------------------------#
-                #   计算f_score
-                #-------------------------------#
-                _f_score = f_score(outputs, labels)
+                    with torch.no_grad():
+                        #-------------------------------#
+                        #   计算f_score
+                        #-------------------------------#
+                        _f_score = f_score(outputs, labels)
 
-            loss.backward()
-            optimizer.step()
+                #----------------------#
+                #   反向传播
+                #----------------------#
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
 
             total_loss      += loss.item()
             total_f_score   += _f_score.item()
