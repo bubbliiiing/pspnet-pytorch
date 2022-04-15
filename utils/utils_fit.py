@@ -27,15 +27,12 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
         imgs, pngs, labels = batch
 
         with torch.no_grad():
-            imgs    = torch.from_numpy(imgs).type(torch.FloatTensor)
-            pngs    = torch.from_numpy(pngs).long()
-            labels  = torch.from_numpy(labels).type(torch.FloatTensor)
             weights = torch.from_numpy(cls_weights)
             if cuda:
-                imgs    = imgs.cuda()
-                pngs    = pngs.cuda()
-                labels  = labels.cuda()
-                weights = weights.cuda()
+                imgs    = imgs.cuda(local_rank)
+                pngs    = pngs.cuda(local_rank)
+                labels  = labels.cuda(local_rank)
+                weights = weights.cuda(local_rank)
 
         optimizer.zero_grad()
         if not fp16:
@@ -132,15 +129,12 @@ def fit_one_epoch(model_train, model, loss_history, optimizer, epoch, epoch_step
             break
         imgs, pngs, labels = batch
         with torch.no_grad():
-            imgs    = torch.from_numpy(imgs).type(torch.FloatTensor)
-            pngs    = torch.from_numpy(pngs).long()
-            labels  = torch.from_numpy(labels).type(torch.FloatTensor)
             weights = torch.from_numpy(cls_weights)
             if cuda:
-                imgs    = imgs.cuda()
-                pngs    = pngs.cuda()
-                labels  = labels.cuda()
-                weights = weights.cuda()
+                imgs    = imgs.cuda(local_rank)
+                pngs    = pngs.cuda(local_rank)
+                labels  = labels.cuda(local_rank)
+                weights = weights.cuda(local_rank)
             #-------------------------------#
             #   判断是否使用辅助分支
             #-------------------------------#
