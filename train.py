@@ -433,9 +433,13 @@ if __name__ == "__main__":
 
                 UnFreeze_flag = True
 
+            if distributed:
+                train_sampler.set_epoch(epoch)
+                
             set_optimizer_lr(optimizer, lr_scheduler_func, epoch)
 
             fit_one_epoch(model_train, model, loss_history, optimizer, epoch, 
                     epoch_step, epoch_step_val, gen, gen_val, UnFreeze_Epoch, Cuda, dice_loss, focal_loss, cls_weights, aux_branch, num_classes, fp16, scaler, save_period, save_dir, local_rank)
-
-        loss_history.writer.close()
+            
+        if local_rank == 0:
+            loss_history.writer.close()
