@@ -261,7 +261,9 @@ if __name__ == "__main__":
 
     if pretrained:
         if distributed:
-            download_weights(backbone) if local_rank == 0 else dist.barrier()
+            if local_rank == 0:
+                download_weights(backbone)  
+            dist.barrier()
         else:
             download_weights(backbone)
 
