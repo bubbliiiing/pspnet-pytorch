@@ -80,7 +80,7 @@ class PSPnetDataset(Dataset):
         #   对图像进行缩放并且进行长和宽的扭曲
         #------------------------------------------#
         new_ar = iw/ih * self.rand(1-jitter,1+jitter) / self.rand(1-jitter,1+jitter)
-        scale = self.rand(0.5, 2)
+        scale = self.rand(0.25, 2)
         if new_ar < 1:
             nh = int(scale*h)
             nw = int(nh*new_ar)
@@ -115,14 +115,14 @@ class PSPnetDataset(Dataset):
         #------------------------------------------#
         #   高斯模糊
         #------------------------------------------#
-        blur = self.rand() < 0.5
+        blur = self.rand() < 0.25
         if blur: 
             image_data = cv2.GaussianBlur(image_data, (5, 5), 0)
 
         #------------------------------------------#
         #   旋转
         #------------------------------------------#
-        rotate = self.rand() < 0.5
+        rotate = self.rand() < 0.25
         if rotate: 
             center      = (w // 2, h // 2)
             rotation    = np.random.randint(-10, 11)

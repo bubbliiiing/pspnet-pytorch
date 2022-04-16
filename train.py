@@ -12,6 +12,7 @@ from nets.pspnet_training import (get_lr_scheduler, set_optimizer_lr,
                                   weights_init)
 from utils.callbacks import LossHistory
 from utils.dataloader import PSPnetDataset, pspnet_dataset_collate
+from utils.utils import download_weights, torch_distributed_zero_first
 from utils.utils_fit import fit_one_epoch
 
 '''
@@ -257,6 +258,14 @@ if __name__ == "__main__":
     else:
         device          = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         local_rank      = 0
+    
+
+    if pretrained:
+        if distributed:
+            with torch_distributed_zero_first(local_rank):
+                download_weights(backbone)
+        else:
+            download_weights(backbone)
 
     model = PSPNet(num_classes=num_classes, backbone=backbone, downsample_factor=downsample_factor, pretrained=pretrained, aux_branch=aux_branch)
     if not pretrained:

@@ -1,9 +1,7 @@
 import math
-import os
 
-import torch
 import torch.nn as nn
-import torch.utils.model_zoo as model_zoo
+from torch.hub import load_state_dict_from_url
 
 BatchNorm2d = nn.BatchNorm2d
 
@@ -147,18 +145,10 @@ class MobileNetV2(nn.Module):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
 
-def load_url(url, model_dir='./model_data', map_location=None):
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-    filename = url.split('/')[-1]
-    cached_file = os.path.join(model_dir, filename)
-    if os.path.exists(cached_file):
-        return torch.load(cached_file, map_location=map_location)
-    else:
-        return model_zoo.load_url(url,model_dir=model_dir)
+
 
 def mobilenetv2(pretrained=False, **kwargs):
     model = MobileNetV2(n_class=1000, **kwargs)
     if pretrained:
-        model.load_state_dict(load_url('http://sceneparsing.csail.mit.edu/model/pretrained_resnet/mobilenet_v2.pth.tar'), strict=False)
+        model.load_state_dict(load_state_dict_from_url('https://github.com/bubbliiiing/pspnet-pytorch/releases/download/v1.0/mobilenet_v2.pth.tar', "./model_data"), strict=False)
     return model

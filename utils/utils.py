@@ -1,5 +1,9 @@
+from contextlib import contextmanager
+
 import numpy as np
+import torch.distributed as dist
 from PIL import Image
+
 
 #---------------------------------------------------------#
 #   将图像转换成RGB图像，防止灰度图在预测时报错。
@@ -39,3 +43,26 @@ def get_lr(optimizer):
 def preprocess_input(image):
     image /= 255.0
     return image
+
+@contextmanager
+def torch_distributed_zero_first(local_rank: int):
+    # Decorator to make all processes in distributed training wait for each local_master to do something
+    if local_rank not in [-1, 0]:
+        dist.barrier(device_ids=[local_rank])
+    yield
+    if local_rank == 0:
+        dist.barrier(device_ids=[0])
+        
+def download_weights(backbone, model_dir="./model_data"):
+    from torch.hub import load_state_dict_from_url
+    import os
+    
+    download_urls = {
+        'mobilenet' : 'https://github.com/bubbliiiing/pspnet-pytorch/releases/download/v1.0/mobilenet_v2.pth.tar',
+        'resnet50'  : 'https://github.com/bubbliiiing/pspnet-pytorch/releases/download/v1.0/resnet50s-a75c83cf.pth'
+    }
+    url = download_urls[backbone]
+    
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    load_state_dict_from_url(url, model_dir)

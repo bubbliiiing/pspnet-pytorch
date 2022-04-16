@@ -22,15 +22,15 @@ class Resnet(nn.Module):
         elif dilate_scale == 16:
             model.layer4.apply(partial(self._nostride_dilate, dilate=2))
 
-        self.conv1 = model.conv1
-        self.bn1 = model.bn1
-        self.relu1 = model.relu1
-        self.conv2 = model.conv2
-        self.bn2 = model.bn2
-        self.relu2 = model.relu2
-        self.conv3 = model.conv3
-        self.bn3 = model.bn3
-        self.relu3 = model.relu3
+        self.conv1 = model.conv1[0]
+        self.bn1 = model.conv1[1]
+        self.relu1 = model.conv1[2]
+        self.conv2 = model.conv1[3]
+        self.bn2 = model.conv1[4]
+        self.relu2 = model.conv1[5]
+        self.conv3 = model.conv1[6]
+        self.bn3 = model.bn1
+        self.relu3 = model.relu
         self.maxpool = model.maxpool
         self.layer1 = model.layer1
         self.layer2 = model.layer2
