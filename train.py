@@ -12,7 +12,7 @@ from nets.pspnet_training import (get_lr_scheduler, set_optimizer_lr,
                                   weights_init)
 from utils.callbacks import LossHistory
 from utils.dataloader import PSPnetDataset, pspnet_dataset_collate
-from utils.utils import download_weights, torch_distributed_zero_first
+from utils.utils import download_weights
 from utils.utils_fit import fit_one_epoch
 
 '''
