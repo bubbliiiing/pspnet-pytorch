@@ -15,7 +15,8 @@ def conv3x3(in_planes, out_planes, stride=1):
 
 class Bottleneck(nn.Module):
     expansion = 4
-    def __init__(self, inplanes, planes, stride=1, dilation=1, downsample=None, norm_layer=None):
+    def __init__(self, inplanes, planes, stride=1, dilation=1, downsample=None, previous_dilation=1,
+                 norm_layer=None):
         super(Bottleneck, self).__init__()
         self.conv1  = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1    = norm_layer(planes)
