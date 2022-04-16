@@ -258,12 +258,10 @@ if __name__ == "__main__":
     else:
         device          = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         local_rank      = 0
-    
 
     if pretrained:
         if distributed:
-            with torch_distributed_zero_first(local_rank):
-                download_weights(backbone)
+            download_weights(backbone) if local_rank == 0 else dist.barrier()
         else:
             download_weights(backbone)
 
