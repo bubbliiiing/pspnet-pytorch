@@ -3,12 +3,10 @@ import math
 import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 
-BatchNorm2d = nn.BatchNorm2d
 
 model_urls = {
     'resnet50': 'https://github.com/bubbliiiing/pspnet-pytorch/releases/download/v1.0/resnet50s-a75c83cf.pth',
 }
-
 
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
