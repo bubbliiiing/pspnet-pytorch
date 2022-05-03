@@ -10,7 +10,7 @@ from PIL import Image
 from torch import nn
 
 from nets.pspnet import PSPNet as pspnet
-from utils.utils import cvtColor, preprocess_input, resize_image
+from utils.utils import cvtColor, preprocess_input, resize_image, show_config
 
 
 #-----------------------------------------------------------------------------------#
@@ -81,6 +81,8 @@ class PSPNet(object):
         #   获得模型
         #---------------------------------------------------#
         self.generate()
+        
+        show_config(**self._defaults)
 
     #---------------------------------------------------#
     #   获得所有的分类
